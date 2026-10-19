@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0812">
+  <title>MyFinance | Dark Purple</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="เมนูหลัก">
+      <a class="brand" href="#dashboard" aria-label="MyFinance หน้าภาพรวม">
+        <span class="brand-icon" aria-hidden="true">◆</span>
+        <span>
+          <strong>MyFinance</strong>
+          <small>PERSONAL FINANCE</small>
+        </span>
+      </a>
+
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="sidebar-nav" aria-label="เมนูหน้าต่าง ๆ">
+        <a class="nav-link is-active" data-page="dashboard" href="#dashboard" aria-current="page"><span aria-hidden="true">◫</span> ภาพรวม</a>
+        <a class="nav-link" data-page="transactions" href="#transactions"><span aria-hidden="true">⇄</span> รายรับ–รายจ่าย</a>
+        <a class="nav-link" data-page="accounts" href="#accounts"><span aria-hidden="true">▣</span> บัญชี</a>
+        <a class="nav-link" data-page="categories" href="#categories"><span aria-hidden="true">◈</span> หมวดหมู่</a>
+        <a class="nav-link" data-page="budgets" href="#budgets"><span aria-hidden="true">◎</span> งบประมาณ</a>
+        <a class="nav-link" data-page="reports" href="#reports"><span aria-hidden="true">▥</span> รายงาน</a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <span class="online-dot" aria-hidden="true"></span>
+        <span>Single-user · Localhost</span>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="page-heading">
+          <span class="eyebrow">MYFINANCE / OVERVIEW</span>
+          <h1 id="pageTitle">ภาพรวมการเงิน</h1>
+          <p id="pageDescription">ติดตามรายรับ รายจ่าย และยอดเงินของคุณในที่เดียว</p>
+        </div>
+        <div class="topbar-actions" id="dashboardControls">
+          <label class="month-picker-label" for="monthPicker">เลือกเดือน</label>
+          <input id="monthPicker" type="month" min="2000-01" max="2100-12" aria-label="เลือกเดือนและปี">
+          <button id="refreshButton" class="button-primary" type="button">↻ รีเฟรช</button>
+        </div>
+        <div class="topbar-actions" id="transactionControls" hidden>
+          <button id="newTransactionButton" class="button-primary" type="button">＋ เพิ่มรายการ</button>
+        </div>
+        <div class="topbar-actions" id="accountControls" hidden>
+          <button id="newAccountButton" class="button-primary" type="button">＋ เพิ่มบัญชี</button>
+        </div>
+        <div class="topbar-actions" id="categoryControls" hidden>
+          <button id="newCategoryButton" class="button-primary" type="button">＋ เพิ่มหมวดหมู่</button>
+        </div>
+        <div class="topbar-actions" id="budgetControls" hidden>
+          <button id="newBudgetButton" class="button-primary" type="button">＋ ตั้งงบประมาณ</button>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div id="apiMessage" class="api-message" role="status" aria-live="polite" hidden></div>
+
+        <section id="dashboardPage" aria-label="แดชบอร์ด">
+          <div class="section-header">
+            <div>
+              <h2>สรุปการเงิน</h2>
+              <p id="selectedPeriod">กำลังโหลด...</p>
+            </div>
+            <span class="live-label"><span class="online-dot" aria-hidden="true"></span> ข้อมูลจาก MongoDB</span>
+          </div>
+
+          <div class="stat-grid">
+            <article class="stat-card stat-card--balance">
+              <div class="stat-top"><span>ยอดคงเหลือรวมทุกบัญชี</span><span class="stat-symbol" aria-hidden="true">◈</span></div>
+              <strong id="totalBalance">—</strong>
+              <small>คำนวณจากยอดตั้งต้นและทุกรายการที่บันทึก</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>รายรับเดือนนี้</span><span class="stat-symbol income" aria-hidden="true">↗</span></div>
+              <strong id="incomeValue">—</strong>
+              <small id="incomeCount">กำลังโหลด...</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>รายจ่ายเดือนนี้</span><span class="stat-symbol expense" aria-hidden="true">↘</span></div>
+              <strong id="expenseValue">—</strong>
+              <small id="expenseCount">กำลังโหลด...</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>สุทธิเดือนนี้</span><span class="stat-symbol" aria-hidden="true">∑</span></div>
+              <strong id="netValue">—</strong>
+              <small>รายรับ − รายจ่าย (ไม่รวมยอดตั้งต้น)</small>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel chart-panel" aria-labelledby="trendsTitle">
+              <div class="panel-heading">
+                <div>
+                  <h2 id="trendsTitle">แนวโน้มรายรับ–รายจ่าย</h2>
+                  <p>เปรียบเทียบย้อนหลัง 6 เดือน</p>
+                </div>
+                <div class="legend" aria-label="สีของกราฟ">
+                  <span><i class="legend-dot legend-dot--income"></i> รายรับ</span>
+                  <span><i class="legend-dot legend-dot--expense"></i> รายจ่าย</span>
+                </div>
+              </div>
+              <div id="trendChart" class="trend-chart" aria-label="กราฟแท่งรายรับและรายจ่ายรายเดือน">
+                <p class="empty-message">กำลังโหลดกราฟ...</p>
+              </div>
+            </section>
+
+            <section class="panel insight-panel" aria-labelledby="insightTitle">
+              <div class="panel-heading">
+                <div>
+                  <h2 id="insightTitle">ภาพรวมเดือนที่เลือก</h2>
+                  <p>ข้อมูลจากรายการที่บันทึกไว้</p>
+                </div>
+              </div>
+              <div class="insight-orb" aria-hidden="true">◈</div>
+              <div class="insight-row"><span>จำนวนรายการทั้งหมด</span><strong id="transactionCount">—</strong></div>
+              <div class="insight-row"><span>รายรับ</span><strong id="insightIncomeCount">—</strong></div>
+              <div class="insight-row"><span>รายจ่าย</span><strong id="insightExpenseCount">—</strong></div>
+              <div class="insight-note">ยอดคงเหลือรวมจะรวมรายการวันที่อนาคตด้วย ตามการออกแบบระบบ</div>
+            </section>
+          </div>
+
+          <section class="panel transactions-panel" aria-labelledby="recentTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="recentTitle">รายการล่าสุดในเดือนที่เลือก</h2>
+                <p>แสดงสูงสุด 5 รายการ</p>
+              </div>
+              <a class="text-link" href="#transactions">ดูหน้ารายการ <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th scope="col">วันที่</th><th scope="col">รายละเอียด</th><th scope="col">บัญชี</th><th scope="col" class="amount-col">จำนวนเงิน</th></tr></thead>
+                <tbody id="recentTransactions"><tr><td colspan="4" class="empty-table">กำลังโหลดรายการ...</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+          <p class="updated-label" id="lastUpdated">—</p>
+        </section>
+
+
+        <section id="transactionsPage" aria-label="รายการรายรับ–รายจ่าย" hidden>
+          <div class="section-header transactions-section-header">
+            <div>
+              <h2>รายการทั้งหมด</h2>
+              <p>ค้นหาและจัดการรายรับ–รายจ่ายที่บันทึกไว้</p>
+            </div>
+            <span id="transactionTotal" class="list-count" aria-live="polite">— รายการ</span>
+          </div>
+
+          <section class="panel filters-panel" aria-label="ค้นหาและกรองรายการ">
+            <form id="transactionFilters" novalidate>
+              <div class="filter-grid">
+                <label class="field filter-search">ค้นหาจากหมายเหตุ
+                  <input id="filterSearch" name="search" type="search" maxlength="100" placeholder="เช่น ค่าอาหาร หรือ เงินเดือน" autocomplete="off">
+                </label>
+                <label class="field">ประเภท
+                  <select id="filterType" name="type">
+                    <option value="">ทั้งหมด</option>
+                    <option value="INCOME">รายรับ</option>
+                    <option value="EXPENSE">รายจ่าย</option>
+                  </select>
+                </label>
+                <label class="field">บัญชี
+                  <select id="filterAccount" name="accountId"><option value="">ทุกบัญชี</option></select>
+                </label>
+                <label class="field">หมวดหมู่
+                  <select id="filterCategory" name="categoryId"><option value="">ทุกหมวดหมู่</option></select>
+                </label>
+                <label class="field">ตั้งแต่วันที่
+                  <input id="filterStart" name="startDate" type="date">
+                </label>
+                <label class="field">ถึงวันที่
+                  <input id="filterEnd" name="endDate" type="date">
+                </label>
+                <label class="field">เรียงลำดับ
+                  <select id="filterSort" name="sort">
+                    <option value="newest">ใหม่ → เก่า</option>
+                    <option value="oldest">เก่า → ใหม่</option>
+                  </select>
+                </label>
+              </div>
+              <div class="filter-actions">
+                <button class="button-secondary" id="resetFilters" type="button">ล้างตัวกรอง</button>
+                <button class="button-primary" id="applyFilters" type="submit">ค้นหารายการ</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel transactions-list-panel" aria-label="ตารางรายการ">
+            <div class="panel-heading list-heading">
+              <div>
+                <h2>ประวัติรายการ</h2>
+                <p id="transactionShowing">กำลังโหลดรายการ...</p>
+              </div>
+              <span class="list-hint">จำนวนเงินแสดงเป็นบาท</span>
+            </div>
+            <div class="table-scroll">
+              <table class="full-transactions-table">
+                <thead>
+                  <tr>
+                    <th scope="col">วันที่</th>
+                    <th scope="col">หมวดหมู่ / หมายเหตุ</th>
+                    <th scope="col">ประเภท</th>
+                    <th scope="col">บัญชี</th>
+                    <th scope="col" class="amount-col">จำนวนเงิน</th>
+                    <th scope="col" class="actions-col">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="transactionsBody"><tr><td colspan="6" class="empty-table">กำลังโหลดรายการ...</td></tr></tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="transactionPageLabel">หน้า —</span>
+              <div class="pagination-buttons">
+                <button class="button-secondary button-small" id="previousTransactionPage" type="button">← ก่อนหน้า</button>
+                <button class="button-secondary button-small" id="nextTransactionPage" type="button">ถัดไป →</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section id="accountsPage" hidden aria-label="จัดการบัญชี">
+          <div class="section-header"><div><h2>บัญชีของฉัน</h2><p>จัดการเงินสด บัญชีธนาคาร และกระเป๋าเงินอิเล็กทรอนิกส์</p></div><span class="list-count" id="accountTotal">— บัญชี</span></div>
+          <section class="panel entity-panel">
+            <div class="panel-heading"><div><h2>บัญชีทั้งหมด</h2><p>ยอดคงเหลือคำนวณจากรายการทั้งหมด รวมรายการวันที่อนาคต</p></div><button class="button-secondary button-small" id="refreshAccounts" type="button">↻ โหลดใหม่</button></div>
+            <div class="table-scroll"><table><thead><tr><th>ชื่อบัญชี</th><th>ประเภท</th><th class="amount-col">ยอดตั้งต้น</th><th class="amount-col">ยอดคงเหลือ</th><th class="actions-col">จัดการ</th></tr></thead><tbody id="accountsBody"><tr><td colspan="5" class="empty-table">กำลังโหลดข้อมูล...</td></tr></tbody></table></div>
+            <p class="panel-footnote">หากบัญชีมี Transactions อ้างอิง ระบบจะไม่อนุญาตให้ลบ</p>
+          </section>
+        </section>
+
+        <section id="categoriesPage" hidden aria-label="จัดการหมวดหมู่">
+          <div class="section-header"><div><h2>หมวดหมู่ของฉัน</h2><p>แยกประเภทหมวดหมู่รายรับและรายจ่าย เพื่อใช้กับ Transactions และ Budgets</p></div><span class="list-count" id="categoryTotal">— หมวดหมู่</span></div>
+          <section class="panel entity-panel">
+            <div class="panel-heading"><div><h2>หมวดหมู่ทั้งหมด</h2><p>ชื่อซ้ำในประเภทเดียวกันไม่ได้</p></div><label class="field compact-filter">แสดงประเภท<select id="categoryListType"><option value="">ทั้งหมด</option><option value="INCOME">รายรับ</option><option value="EXPENSE">รายจ่าย</option></select></label></div>
+            <div class="table-scroll"><table><thead><tr><th>ชื่อหมวดหมู่</th><th>ประเภท</th><th class="actions-col">จัดการ</th></tr></thead><tbody id="categoriesBody"><tr><td colspan="3" class="empty-table">กำลังโหลดข้อมูล...</td></tr></tbody></table></div>
+            <p class="panel-footnote">หมวดหมู่ที่มี Transactions หรือ Budgets อ้างอิงจะไม่สามารถลบได้</p>
+          </section>
+        </section>
+
+        <section id="budgetsPage" hidden aria-label="จัดการงบประมาณ">
+          <div class="section-header"><div><h2>งบประมาณรายเดือน</h2><p>ติดตามวงเงินของหมวดรายจ่ายและการใช้จริงจาก Transactions</p></div><span class="live-label"><span class="online-dot" aria-hidden="true"></span> คำนวณจากข้อมูลจริง</span></div>
+          <section class="panel entity-panel">
+            <form id="budgetFilters" class="toolbar-form" novalidate>
+              <label class="field">เดือนและปี<input id="budgetMonthFilter" type="month" min="2000-01" max="2100-12" required></label>
+              <label class="field">หมวดหมู่<select id="budgetCategoryFilter"><option value="">ทุกหมวดหมู่</option></select></label>
+              <button class="button-primary" type="submit">ดูงบประมาณ</button>
+            </form>
+          </section>
+          <div id="budgetsGrid" class="budget-grid" aria-live="polite"><div class="panel empty-card">กำลังโหลดงบประมาณ...</div></div>
+          <p class="panel-footnote budget-note">ใช้เงินจริงอาจมากกว่าวงเงินที่ตั้งไว้ และการลบงบไม่ลบ Transactions</p>
+        </section>
+
+        <section id="reportsPage" hidden aria-label="รายงานการเงิน">
+          <div class="section-header"><div><h2>รายงานการเงิน</h2><p>สรุปตามช่วงวันที่ แยกหมวดหมู่ และติดตามผลรายเดือน</p></div></div>
+          <section class="panel entity-panel">
+            <form id="reportFilters" class="toolbar-form report-filters" novalidate>
+              <label class="field">ตั้งแต่วันที่<input id="reportStart" type="date" required></label>
+              <label class="field">ถึงวันที่<input id="reportEnd" type="date" required></label>
+              <label class="field">ประเภทสำหรับรายงานหมวดหมู่<select id="reportType"><option value="">ทั้งหมด</option><option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ</option></select></label>
+              <button class="button-primary" type="submit">สร้างรายงาน</button>
+            </form>
+          </section>
+          <div class="stat-grid report-stats">
+            <article class="stat-card"><div class="stat-top">รายรับในช่วงวันที่ <span class="stat-symbol income">↗</span></div><strong id="reportIncome">—</strong></article>
+            <article class="stat-card"><div class="stat-top">รายจ่ายในช่วงวันที่ <span class="stat-symbol expense">↘</span></div><strong id="reportExpense">—</strong></article>
+            <article class="stat-card"><div class="stat-top">ยอดสุทธิ <span class="stat-symbol">∑</span></div><strong id="reportNet">—</strong></article>
+            <article class="stat-card"><div class="stat-top">จำนวนรายการ <span class="stat-symbol">≡</span></div><strong id="reportCount">—</strong></article>
+          </div>
+          <section class="panel report-panel"><div class="panel-heading"><div><h2>สรุปตามหมวดหมู่</h2><p>เปอร์เซ็นต์เทียบกับยอดรวมประเภทเดียวกัน</p></div></div><div id="reportCategoryBars" class="category-bars"><p class="empty-message">กำลังโหลดรายงาน...</p></div></section>
+          <section class="panel report-panel"><div class="panel-heading report-month-heading"><div><h2>รายงานรายเดือน</h2><p>ยอดรายรับและรายจ่ายครบ 12 เดือน</p></div><form id="reportYearForm" class="year-form"><label class="field">ปี ค.ศ.<input id="reportYear" type="number" min="2000" max="2100" step="1"></label><button class="button-secondary" type="submit">ดูรายปี</button></form></div>
+            <div id="reportMonthlyChart" class="monthly-chart" aria-label="กราฟรายรับรายจ่ายทั้งปี"><p class="empty-message">กำลังโหลดข้อมูล...</p></div>
+            <div class="table-scroll"><table><thead><tr><th>เดือน</th><th class="amount-col">รายรับ</th><th class="amount-col">รายจ่าย</th><th class="amount-col">สุทธิ</th></tr></thead><tbody id="reportMonthlyBody"></tbody></table></div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="transactionDialog" class="modal" aria-labelledby="transactionDialogTitle">
+    <div class="modal-header">
+      <div><span class="eyebrow">TRANSACTION</span><h2 id="transactionDialogTitle">เพิ่มรายการใหม่</h2></div>
+      <button type="button" id="closeTransactionDialog" class="icon-button" aria-label="ปิดหน้าต่าง">✕</button>
+    </div>
+    <form id="transactionForm" novalidate>
+      <div class="form-grid">
+        <label class="field">ประเภท <span class="required">*</span>
+          <select id="transactionType" name="type" required>
+            <option value="EXPENSE">รายจ่าย</option>
+            <option value="INCOME">รายรับ</option>
+          </select>
+        </label>
+        <label class="field">จำนวนเงิน (บาท) <span class="required">*</span>
+          <input id="transactionAmount" name="amount" type="text" inputmode="decimal" placeholder="เช่น 150.00" maxlength="20" required autocomplete="off">
+        </label>
+        <label class="field">บัญชี <span class="required">*</span>
+          <select id="transactionAccount" name="accountId" required><option value="">เลือกบัญชี</option></select>
+        </label>
+        <label class="field">หมวดหมู่ <span class="required">*</span>
+          <select id="transactionCategory" name="categoryId" required><option value="">เลือกหมวดหมู่</option></select>
+        </label>
+        <label class="field">วันที่ทำรายการ <span class="required">*</span>
+          <input id="transactionDate" name="transactionDate" type="date" required>
+        </label>
+        <label class="field field-wide">หมายเหตุ (ไม่เกิน 255 ตัวอักษร)
+          <textarea id="transactionNote" name="note" rows="3" maxlength="255" placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"></textarea>
+        </label>
+      </div>
+      <div id="transactionFormError" class="inline-error" role="alert" hidden></div>
+      <div class="modal-actions">
+        <button id="cancelTransactionDialog" type="button" class="button-secondary">ยกเลิก</button>
+        <button id="saveTransactionButton" type="submit" class="button-primary">บันทึกรายการ</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="deleteTransactionDialog" class="modal modal-small" aria-labelledby="deleteDialogTitle">
+    <div class="modal-header">
+      <div><span class="eyebrow">CONFIRM DELETE</span><h2 id="deleteDialogTitle">ยืนยันการลบรายการ</h2></div>
+      <button id="closeDeleteDialog" class="icon-button" type="button" aria-label="ปิดหน้าต่าง">✕</button>
+    </div>
+    <p class="modal-description">คุณต้องการลบรายการนี้หรือไม่? เมื่อลบแล้วข้อมูลจะถูกลบถาวร</p>
+    <div id="deleteTransactionSummary" class="delete-summary"></div>
+    <div id="deleteTransactionError" class="inline-error" role="alert" hidden></div>
+    <div class="modal-actions">
+      <button class="button-secondary" id="cancelDeleteTransaction" type="button">ยกเลิก</button>
+      <button class="button-danger" id="confirmDeleteTransaction" type="button">ลบรายการถาวร</button>
+    </div>
+  </dialog>
+
+  <dialog id="entityDialog" class="modal" aria-labelledby="entityDialogTitle">
+    <div class="modal-header"><div><span class="eyebrow" id="entityEyebrow">MANAGE</span><h2 id="entityDialogTitle">เพิ่มข้อมูล</h2></div><button type="button" class="icon-button" id="closeEntityDialog" aria-label="ปิดหน้าต่าง">✕</button></div>
+    <form id="entityForm" novalidate>
+      <div id="accountFormFields" class="form-grid" hidden>
+        <label class="field field-wide">ชื่อบัญชี <span class="required">*</span><input id="entityAccountName" maxlength="100" type="text" placeholder="เช่น เงินสด" autocomplete="off"></label>
+        <label class="field">ประเภทบัญชี <span class="required">*</span><select id="entityAccountType"><option value="CASH">เงินสด</option><option value="BANK">ธนาคาร</option><option value="EWALLET">กระเป๋าเงินอิเล็กทรอนิกส์</option></select></label>
+        <label class="field">ยอดตั้งต้น (บาท) <span class="required">*</span><input id="entityInitialBalance" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></label>
+      </div>
+      <div id="categoryFormFields" class="form-grid" hidden>
+        <label class="field field-wide">ชื่อหมวดหมู่ <span class="required">*</span><input id="entityCategoryName" type="text" maxlength="100" placeholder="เช่น ค่าอินเทอร์เน็ต" autocomplete="off"></label>
+        <label class="field field-wide">ประเภทหมวดหมู่ <span class="required">*</span><select id="entityCategoryType"><option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ</option></select></label>
+      </div>
+      <div id="budgetFormFields" class="form-grid" hidden>
+        <label class="field field-wide">หมวดหมู่รายจ่าย <span class="required">*</span><select id="entityBudgetCategory"><option value="">เลือกหมวดหมู่</option></select></label>
+        <label class="field">เดือนและปี <span class="required">*</span><input id="entityBudgetMonth" type="month" min="2000-01" max="2100-12"></label>
+        <label class="field">วงเงิน (บาท) <span class="required">*</span><input id="entityBudgetLimit" type="text" inputmode="decimal" placeholder="เช่น 3000.00" autocomplete="off"></label>
+      </div>
+      <div id="entityFormError" class="inline-error" role="alert" hidden></div>
+      <div class="modal-actions"><button type="button" id="cancelEntityDialog" class="button-secondary">ยกเลิก</button><button type="submit" id="saveEntityButton" class="button-primary">บันทึก</button></div>
+    </form>
+  </dialog>
+  <dialog id="entityDeleteDialog" class="modal modal-small" aria-labelledby="entityDeleteTitle">
+    <div class="modal-header"><div><span class="eyebrow">CONFIRM DELETE</span><h2 id="entityDeleteTitle">ยืนยันการลบ</h2></div><button type="button" id="closeEntityDelete" class="icon-button" aria-label="ปิด">✕</button></div>
+    <p class="modal-description" id="entityDeleteMessage">คุณต้องการลบข้อมูลนี้หรือไม่?</p>
+    <div id="entityDeleteSummary" class="delete-summary"></div>
+    <div id="entityDeleteError" class="inline-error" role="alert" hidden></div>
+    <div class="modal-actions"><button type="button" id="cancelEntityDelete" class="button-secondary">ยกเลิก</button><button type="button" id="confirmEntityDelete" class="button-danger">ลบข้อมูล</button></div>
+  </dialog>
+</body>
+</html>
